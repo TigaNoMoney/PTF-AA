@@ -1,0 +1,151 @@
+================================================================================
+为什么下载的 Word 和母版一模一样？
+================================================================================
+程序用 docxtemplater 按「占位符」替换内容。若母版 template.docx 里没有任何占位符，
+生成结果就会与母版相同。
+
+你需要做的：用 Microsoft Word 打开 server/template/template.docx，把要随表单变化
+的文字删掉，改成下面这种占位符（半角、单花括号 {变量名}，与 docxtemplater 默认定界符一致）。
+
+--------------------------------------------------------------------------------
+第一步：先验证一个字段（推荐）
+--------------------------------------------------------------------------------
+例如把文档里某处的「AA」改成（整段就是一个占位符，不要多空格）：
+
+  {appName}
+
+保存后重启后端，在前端改「应用」字段，再点下载，应看到该处随应用名变化。
+
+--------------------------------------------------------------------------------
+环境（网页是「三选一」下拉，母版是三个复选框）
+--------------------------------------------------------------------------------
+推荐：删整行原来的「☐ UAT ☐ Regression ☒ Production …」只留下面一个占位符（一行内）：
+
+  {environmentLine}
+
+程序会输出与母版相同风格的一行，例如：
+  ☐ UAT   ☐ Regression   ☒ Production
+
+若你只想显示纯文字、不要复选符号，用：
+
+  {environment}
+
+另供高手使用（docxtemplater 条件块，需写多段标签；选中的为 true）：
+  envUat、envRegression、envProduction
+
+示例（「UAT」左侧只显示 ☒ 或 ☐，再写文字 UAT；另两行同理各做一段）：
+  {#envUat}☒{/envUat}{^envUat}☐{/envUat} UAT   {#envRegression}☒{/envRegression}{^envRegression}☐{/envRegression} Regression   …
+
+一般情况用 {environmentLine} 即可，不必写条件块。
+
+--------------------------------------------------------------------------------
+常用标量占位符（与网页表单对应）
+--------------------------------------------------------------------------------
+  {environment}        仅环境名：UAT / Regression / Production（无 ☐/☒）
+  {environmentLine}    一整行复选样式（推荐替代母版里那行复选）
+  {appName}            应用名
+  {expectedStart}      预计开始「整段」：如 2026-04-17 21:00
+  {expectedEnd}        预计结束「整段」
+
+-- 母版里「日期」和「时间」分两格/两列时，用下面四个（与 Application Migration Summary 表一致）--
+
+  {expectedStartDate}   例如 2026-04-17
+  {expectedStartTime}   例如 21:00
+  {expectedEndDate}     例如 2026-04-18
+  {expectedEndTime}     例如 00:00
+
+说明：网页里选的是「日期+时间」一体；后端会按空格拆开。格式须类似：
+  2026-04-17 21:00
+（中间是空格；若拆不开，整串会留在「Date」里，Time 为空。）
+
+  {postChecks}         事后检查全文
+  {rollback}           回滚说明
+  {contactsWintel}     联络人 Wintel
+  {contactsDba}        联络人 DBA
+  {jiraAaWeb}          回滚 aa-web 的 Jira 链接
+  {jiraAaApi}          回滚 aa-api 的 Jira 链接
+
+--------------------------------------------------------------------------------
+表格多行：循环（ITSR、Pipeline、静态文件、DB 脚本、实施步骤）
+--------------------------------------------------------------------------------
+在 Word 里对「一整行」做循环，需使用 docxtemplater 的循环语法。变量名与表单 JSON
+一致，列名为：
+
+  itsrRows:      prb, chgId, title, preparedBy, teamLead
+  pipelines:     name, link, itsrRef
+  staticFiles:   type, sourcePath, destPath
+  dbScripts:     server, location, scriptName, env, schemaChange, projectCode
+  implementationSteps: step, remarks, actionBy, startTime, estimation
+
+标准写法示例（在 Word 里分两行，不要换行在标签中间）：
+
+  {#itsrRows}
+  {prb}	{chgId}	{title}	{preparedBy}	{teamLead}
+  {/itsrRows}
+
+--------------------------------------------------------------------------------
+实施步骤表：Deployment Steps 列想「固定母版那几行」（推荐用 deploymentRows）
+--------------------------------------------------------------------------------
+母版 Timing Summary 里「Deployment Steps」列是固定文案，例如：
+  DB Script Deployment Plan、File Transfer/Setup、Critical Milestone(s)…
+
+后端会生成数组 deploymentRows：第 1 列 step 永远是上面这种固定句；第 2～5 列来自
+网页 implementationSteps 的第 1～5 行（按顺序对齐），只取：
+  remarks、actionBy、startTime、estimation
+（若某行没填 remarks 但填了 step，会把它当作 remarks 用，避免空行。）
+
+在 Word 里用循环时写 **deploymentRows**（不要再用 implementationSteps 全字段循环，否则
+step 列会变成表单里的自填内容）：
+
+  {#deploymentRows}
+  {step}	{remarks}	{actionBy}	{startTime}	{estimation}
+  {/deploymentRows}
+
+在 Word 表格里时：应把「表头下第一行整行」做成重复行，每一格里分别放
+  {#deploymentRows}、{step}、{remarks}、{actionBy}、{startTime}、{estimation}、{/deploymentRows}
+（具体以 docxtemplater 表格行重复教程为准，要点是成对出现同一行的开始/结束标签）
+
+若网页上超过 5 行，会接着输出「第 6 行起」，第 1 列用表单里填的 step（或 Other (1)）。
+
+固定那几行英文可在 server/src/generatePtf.js 里改常量 FIXED_DEPLOYMENT_STEPS。
+
+「Grand Total」行母版上多为单独一行、不用循环，可手工保留「Grand Total | 3 hours」
+或自己加占位符，当前未自动求和。
+
+--------------------------------------------------------------------------------
+仍要用「表单单步名称」作第一列的循环
+--------------------------------------------------------------------------------
+使用原来的 implementationSteps（{step} 为表单自填）：
+
+  {#implementationSteps}
+  {step}	{remarks}	{actionBy}	{startTime}	{estimation}
+  {/implementationSteps}
+
+Word 表格行循环的详细做法以官方说明为准（表格模块 / 行重复）:
+  https://docxtemplater.com/docs/
+
+--------------------------------------------------------------------------------
+改完母版后
+--------------------------------------------------------------------------------
+- 开发：确保 Node 在跑（与 Vite 同时：在项目根执行 npm run dev）
+- 保存 template.docx 后无需改代码，直接再点「下载 Word」
+
+--------------------------------------------------------------------------------
+表格区域「没有字 / 像没生成」时常见原因
+--------------------------------------------------------------------------------
+1) 表单项是空的
+   例如 ITSR/PRB 表：网页上每一列都要填了内容，导出的行里才会出现字；全空时循环仍会执行，
+   但看起来就像「表格没生成」。
+
+2) 与母版里循环名不一致
+   母版、后端与网页字段必须一致，例如 itsrRows、pipelines、staticFiles、dbScripts、
+   implementationSteps（或 Deployment 表用 deploymentRows）。名写错则整段循环都不会替换。
+
+3) Word 里「多行表」的错觉
+   docxtemplater 只有在「{#…}{/…} 包住一整行 w:tr」时才会物理复制表格行。若母版里循环都挤在
+   同一行、同一格的长段落里，多笔数据会接在同一行/同一格内，**不会**自动多出多根 Word
+   的表格行（w:tr 条数可不变，属正常现象）。要「多行多格」需在 Word 里按官方做法把起止标签
+   包在**完整表格行**上。详见：https://docxtemplater.com/docs/
+
+4) 后端未连上
+   未启动 server 或 3001 被占用时，/api/generate 失败，会提示错误，而不是静默空白。
