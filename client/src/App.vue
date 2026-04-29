@@ -59,7 +59,7 @@ const previewDrawerOpen = ref(false)
             </template>
           </PtfAppHeader>
 
-          <a-row :gutter="[24, 24]" class="main-row" align="top">
+          <a-row :gutter="[24, 24]" class="main-row" align="stretch">
             <a-col :xs="24" :lg="isWide ? 14 : 24" :xl="isWide ? 15 : 24" class="form-col">
               <a-form layout="vertical" class="form-wrap" @submit.prevent>
                 <PtfBasicInfo />
@@ -134,12 +134,16 @@ const previewDrawerOpen = ref(false)
 }
 .preview-col {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 .preview-aside {
   position: sticky;
-  top: 20px;
-  max-height: calc(100dvh - 40px);
-  max-height: calc(100vh - 40px);
+  top: 12px;
+  align-self: start;
+  width: 100%;
+  max-height: calc(100dvh - 32px);
+  max-height: calc(100vh - 32px);
   display: flex;
   flex-direction: column;
 }

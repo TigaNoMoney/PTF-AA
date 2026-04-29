@@ -285,7 +285,7 @@ const staticNote1 =
           </thead>
           <tbody>
             <tr v-for="(row, i) in form.pipelines" :key="'p' + i">
-              <td class="p-center">{{ i + 1 }}</td>
+              <td class="p-center">{{ row.seq ?? i + 1 }}</td>
               <td class="cell-wrap">{{ d(row.name) }}</td>
               <td class="cell-mono cell-wrap">{{ d(row.link) }}</td>
               <td class="cell-wrap">{{ d(row.itsrRef) }}</td>
@@ -307,9 +307,10 @@ const staticNote1 =
       <p class="p-indent">{{ d(form.contacts.wintel) }}</p>
       <p class="ptf-weak ptf-srv">（Server: 母版有 WHKEASE… 行；当前表单无独立字段，下载 Word 时由母版/手工维护）</p>
       <div class="doc-table-wrap">
-        <table class="ptf-grid-3 ptf-tbl">
+        <table class="ptf-grid-4 ptf-tbl">
           <thead>
             <tr>
+              <th>#</th>
               <th>Type</th>
               <th>Source Folder Path</th>
               <th>Destination Path</th>
@@ -317,6 +318,7 @@ const staticNote1 =
           </thead>
           <tbody>
             <tr v-for="(row, i) in form.staticFiles" :key="'s' + i">
+              <td class="p-center">{{ i + 1 }}</td>
               <td>{{ d(row.type) }}</td>
               <td class="cell-mono cell-wrap">{{ d(row.sourcePath) }}</td>
               <td class="cell-mono cell-wrap">{{ d(row.destPath) }}</td>
@@ -345,7 +347,7 @@ const staticNote1 =
           </thead>
           <tbody>
             <tr v-for="(row, i) in form.dbScripts" :key="'d' + i">
-              <td class="p-center">{{ i + 1 }}</td>
+              <td class="p-center">{{ row.seq ?? i + 1 }}</td>
               <td class="cell-wrap">{{ d(row.server) }}</td>
               <td class="cell-mono cell-wrap">{{ d(row.location) }}</td>
               <td class="cell-mono">{{ d(row.scriptName) }}</td>

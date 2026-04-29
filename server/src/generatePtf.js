@@ -144,7 +144,9 @@ function buildTemplateData(body) {
     itsrRows: Array.isArray(body.itsrRows) ? body.itsrRows : [],
     pipelines: Array.isArray(body.pipelines) ? body.pipelines : [],
     staticFiles: Array.isArray(body.staticFiles) ? body.staticFiles : [],
-    dbScripts: Array.isArray(body.dbScripts) ? body.dbScripts : [],
+    dbScripts: Array.isArray(body.dbScripts)
+      ? body.dbScripts.map((row, i) => ({ ...row, seq: i + 1 }))
+      : [],
     /** 原始 5+ 行，step 为表单填写；若母版要固定第 1 列，请用 deploymentRows 循环，不要用本数组 */
     implementationSteps: Array.isArray(body.implementationSteps)
       ? body.implementationSteps

@@ -5,6 +5,7 @@ import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 import { generatePtf } from "./generatePtf.js";
+import { buildChangeTicketZipBuffer } from "./zipChangeTicketBundle.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const clientDist = path.join(__dirname, "..", "..", "client", "dist");
@@ -23,15 +24,29 @@ app.get("/api/health", (_req, res) => {
 
 app.post("/api/generate", async (req, res) => {
   try {
-    const buffer = await generatePtf(req.body);
     const suffix = (req.body?.fileNameSuffix || "Wintel,DBA").replace(/[<>:"/\\|?*]/g, "-");
+    const docxBuffer = await generatePtf(req.body);
+    const wantBundle = Boolean(req.body?.createChangeTicketFolders);
+
+    if (wantBundle) {
+      const zipBuffer = await buildChangeTicketZipBuffer(docxBuffer, {
+        sanitizedSuffix: suffix,
+        itsrRows: req.body?.itsrRows,
+      });
+      const zipName = `PROD-PTF-AA-${suffix}.zip`;
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader("Content-Disposition", `attachment; filename="${zipName}"`);
+      res.send(zipBuffer);
+      return;
+    }
+
     const fileName = `PROD-PTF-AA-${suffix}.docx`;
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     );
     res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
-    res.send(buffer);
+    res.send(docxBuffer);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || "生成失败" });

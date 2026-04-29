@@ -3,6 +3,26 @@ import { createDefaultImplementationSteps } from '../constants/deploymentSteps.j
 
 const PTF_KEY = Symbol('ptfForm')
 
+/** 为 pipelines、dbScripts 行维护从 1 开始的序号（staticFiles 不含 seq） */
+function renumberSeqForRows(arr) {
+  if (!arr?.length) return
+  const r0 = arr[0]
+  const isPipeline =
+    r0 &&
+    'name' in r0 &&
+    'link' in r0 &&
+    'itsrRef' in r0
+  const isDbScript =
+    r0 &&
+    'scriptName' in r0 &&
+    'schemaChange' in r0 &&
+    'projectCode' in r0
+  if (!isPipeline && !isDbScript) return
+  arr.forEach((row, idx) => {
+    row.seq = idx + 1
+  })
+}
+
 const initialState = () => ({
   environment: 'Production',
   fileNameSuffix: 'Wintel,DBA',
@@ -12,10 +32,11 @@ const initialState = () => ({
   itsrRows: [
     { prb: '', chgId: '', title: '', preparedBy: '', teamLead: '' },
   ],
-  pipelines: [{ name: '', link: '', itsrRef: '' }],
+  pipelines: [{ seq: 1, name: '', link: '', itsrRef: '' }],
   staticFiles: [{ type: 'Folder', sourcePath: '', destPath: '' }],
   dbScripts: [
     {
+      seq: 1,
       server: '',
       location: '',
       scriptName: '',
@@ -32,6 +53,8 @@ const initialState = () => ({
   },
   postChecks: 'AA routine health check including common functions by IT development team',
   rollback: '',
+  /** 勾选时下载 ZIP：含 PTF/ 与 change ticket/ 子文件夹结构 */
+  createChangeTicketFolders: false,
 })
 
 export function createPtfFormState() {
@@ -54,6 +77,7 @@ export function addPtfRow(form, key) {
     form.itsrRows.push({ prb: '', chgId: '', title: '', preparedBy: '', teamLead: '' })
   } else if (key === 'pipelines') {
     form.pipelines.push({ name: '', link: '', itsrRef: '' })
+    renumberSeqForRows(form.pipelines)
   } else if (key === 'staticFiles') {
     form.staticFiles.push({ type: 'Folder', sourcePath: '', destPath: '' })
   } else if (key === 'dbScripts') {
@@ -65,10 +89,12 @@ export function addPtfRow(form, key) {
       schemaChange: 'N',
       projectCode: '',
     })
+    renumberSeqForRows(form.dbScripts)
   }
   // implementationSteps 固定 5 行，不在此追加
 }
 
 export function removePtfAt(arr, i) {
   if (arr.length > 1) arr.splice(i, 1)
+  renumberSeqForRows(arr)
 }

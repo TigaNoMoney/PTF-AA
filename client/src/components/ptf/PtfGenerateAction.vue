@@ -1,7 +1,11 @@
 <script setup>
 import { h } from 'vue'
 import { message } from 'ant-design-vue'
-import { FileWordOutlined, CloudDownloadOutlined } from '@ant-design/icons-vue'
+import {
+  FileWordOutlined,
+  CloudDownloadOutlined,
+  FileZipOutlined,
+} from '@ant-design/icons-vue'
 import { usePtfForm } from '../../composables/usePtfFormContext.js'
 import { generatePtfDocx } from '../../api.js'
 
@@ -16,7 +20,13 @@ async function onSubmit() {
   loading.value = true
   try {
     const blob = await generatePtfDocx(plainFormPayload())
-    const name = `PROD-PTF-AA-${form.fileNameSuffix || 'Wintel,DBA'}.docx`
+    const suffix = (form.fileNameSuffix || 'Wintel,DBA').replace(
+      /[<>:"/\\|?*]/g,
+      '-',
+    )
+    const name = form.createChangeTicketFolders
+      ? `PROD-PTF-AA-${suffix}.zip`
+      : `PROD-PTF-AA-${suffix}.docx`
     const safe = name.replace(/[<>:"/\\|?*]/g, '-')
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
@@ -25,7 +35,7 @@ async function onSubmit() {
     URL.revokeObjectURL(a.href)
     message.success({
       content: `已下载：${safe}`,
-      icon: h(FileWordOutlined),
+      icon: h(form.createChangeTicketFolders ? FileZipOutlined : FileWordOutlined),
     })
   } catch (e) {
     message.error(e?.message || '生成失败')
@@ -37,7 +47,7 @@ async function onSubmit() {
 
 <template>
   <a-card :bordered="false" class="section-card action-card">
-    <a-space :size="16" wrap>
+    <a-space :size="16" wrap align="center">
       <a-button
         type="primary"
         size="large"
@@ -47,10 +57,19 @@ async function onSubmit() {
         <template #icon>
           <CloudDownloadOutlined v-if="!loading" />
         </template>
-        下载 Word
+        下载 {{ form.createChangeTicketFolders ? 'ZIP 包' : 'Word' }}
       </a-button>
+      <a-checkbox v-model:checked="form.createChangeTicketFolders">
+        创建 change ticket 文件夹
+      </a-checkbox>
       <a-typography-text type="secondary">
-        将调用 <a-typography-text code>POST /api/generate</a-typography-text> 并触发浏览器下载
+        勾选后为 ZIP：<a-typography-text code>PTF/</a-typography-text>
+        ，以及「ITSR／PRB」中填写的每个
+        <a-typography-text code>CHG ID</a-typography-text>
+        对应一层
+        <a-typography-text code>change ticket</a-typography-text>
+        文件夹；否则仅 Word。
+        <a-typography-text code>POST /api/generate</a-typography-text>
       </a-typography-text>
     </a-space>
   </a-card>
