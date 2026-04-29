@@ -9,6 +9,11 @@ function trimLoopTagInnerNames(xml) {
     .replace(/\{\^([^}]*)\}/g, (_, inner) => `{^${inner.trim()}}`);
 }
 
+/** 母版中常见笔误：第二列写成 {#pipelines} {name}，应仅为 {name}，否则 loops 不匹配 */
+function dropDuplicatePipelineLoopOpen(xml) {
+  return xml.replace(/\{#pipelines\}\s+\{name\}/g, "{name}");
+}
+
 /**
  * Word 常把 docxtemplater 占位符 {name} 或 {{name}} 拆成多个 w:t，导致无法解析；合并为单段 w:t。
  * 在内存中把「仅含文本 run」的 w:p 合并为单段 w:t，便于 docxtemplater 解析。
@@ -38,5 +43,5 @@ export function normalizeDocumentXmlForDocxtemplater(xml) {
     const rPr = rPrM ? rPrM[1] : "<w:rPr><w:sz w:val=\"24\"/></w:rPr>";
     return `${open}${pPr}<w:r>${rPr}<w:t xml:space="preserve">${joined}</w:t></w:r></w:p>`;
   });
-  return trimLoopTagInnerNames(s);
+  return dropDuplicatePipelineLoopOpen(trimLoopTagInnerNames(s));
 }

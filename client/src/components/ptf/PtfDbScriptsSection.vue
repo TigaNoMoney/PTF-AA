@@ -18,7 +18,7 @@ const { form, addRow, removeAt } = usePtfForm()
         v-for="(row, i) in form.dbScripts"
         :key="'db' + i"
         size="small"
-        :title="`第 ${i + 1} 行`"
+        :title="`第 ${row.seq ?? i + 1} 行`"
         type="inner"
       >
         <template #extra>
