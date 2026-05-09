@@ -43,6 +43,14 @@ function d(v) {
   return s === '' ? '—' : s
 }
 
+function itsrCell(row) {
+  const t = (row?.prb || '').trim()
+  const id = (row?.prbId || '').trim()
+  if (!t && !id) return '—'
+  if (t && id) return `${t} ${id}`
+  return t || id
+}
+
 function envRow() {
   const e = (form.environment || '').trim()
   const uat = e === 'UAT' ? '☑' : '☐'
@@ -158,7 +166,7 @@ const staticNote1 =
           </thead>
           <tbody>
             <tr v-for="(row, i) in form.itsrRows" :key="'i' + i">
-              <td>{{ d(row.prb) }}</td>
+              <td>{{ itsrCell(row) }}</td>
               <td>{{ d(row.chgId) }}</td>
               <td class="cell-wrap">{{ d(row.title) }}</td>
               <td>{{ d(row.preparedBy) }}</td>

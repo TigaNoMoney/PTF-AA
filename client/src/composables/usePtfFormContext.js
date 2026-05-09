@@ -30,7 +30,7 @@ const initialState = () => ({
   expectedStart: '',
   expectedEnd: '',
   itsrRows: [
-    { prb: '', chgId: '', title: '', preparedBy: '', teamLead: '' },
+    { prb: 'ITSR', prbId: '', chgId: '', title: '', preparedBy: '', teamLead: '' },
   ],
   pipelines: [{ seq: 1, name: '', link: '', itsrRef: '' }],
   staticFiles: [{ type: 'Folder', sourcePath: '', destPath: '' }],
@@ -74,7 +74,7 @@ export function usePtfForm() {
 /** 供 App 用：与原有 addRow 逻辑一致 */
 export function addPtfRow(form, key) {
   if (key === 'itsrRows') {
-    form.itsrRows.push({ prb: '', chgId: '', title: '', preparedBy: '', teamLead: '' })
+    form.itsrRows.push({ prb: 'ITSR', prbId: '', chgId: '', title: '', preparedBy: '', teamLead: '' })
   } else if (key === 'pipelines') {
     form.pipelines.push({ name: '', link: '', itsrRef: '' })
     renumberSeqForRows(form.pipelines)
