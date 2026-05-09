@@ -100,12 +100,34 @@ function buildDeploymentRows(userSteps) {
   return merged.concat(extra);
 }
 
+/**
+ * 将 Estimation 字段提取为数字（取第一个连续数字，如 "3" "3h" "2.5 hours"）。
+ * 无数字则计 0，用于 Grand Total 统计（与前端预览逻辑保持一致）。
+ */
+function parseEstimationToNumber(v) {
+  if (v == null) return 0;
+  const s = String(v).trim();
+  if (s === "") return 0;
+  const m = s.match(/-?\d+(?:\.\d+)?/);
+  return m ? Number(m[0]) : 0;
+}
+
 function buildTemplateData(body) {
   const contacts = body.contacts || {};
   const jira = body.jira || {};
   const environment = (body.environment || "").trim();
   const startSplit = splitDateTime(body.expectedStart);
   const endSplit = splitDateTime(body.expectedEnd);
+  const deploymentRows = buildDeploymentRows(body.implementationSteps);
+  const estimationGrandTotal = deploymentRows.reduce(
+    (sum, row) => sum + parseEstimationToNumber(row && row.estimation),
+    0
+  );
+  const estimationGrandTotalDisplay = Number.isFinite(estimationGrandTotal)
+    ? estimationGrandTotal % 1 === 0
+      ? String(estimationGrandTotal)
+      : String(Math.round(estimationGrandTotal * 100) / 100)
+    : "0";
 
   return {
     // 标量：在 Word 里写 {{environment}}、{{appName}} 等
@@ -152,6 +174,10 @@ function buildTemplateData(body) {
       ? body.implementationSteps
       : [],
     /** 固定 Deployment Step 列 + 与表单行顺序对齐的数据；Word 用 {#deploymentRows}…{/deploymentRows} */
-    deploymentRows: buildDeploymentRows(body.implementationSteps),
+    deploymentRows,
+
+    // Estimation 统计：Word 可直接用 {{estimationGrandTotalDisplay}} 或 {{estimationGrandTotal}}
+    estimationGrandTotal,
+    estimationGrandTotalDisplay,
   };
 }
