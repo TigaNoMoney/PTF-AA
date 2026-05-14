@@ -1,0 +1,75 @@
+name: Deploy to smartkun.cn
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: deploy-ptf-aa-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_PATH: /www/wwwroot/ptf-aa
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install & build frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Rsync to server
+        env:
+          SSH_HOST: ${{ secrets.DEPLOY_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ env.DEPLOY_PATH }}
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_rsa
+          chmod 600 ~/.ssh/deploy_rsa
+          PORT="${SSH_PORT:-22}"
+          ssh-keyscan -p "$PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          RSYNC_RSH="ssh -i ~/.ssh/deploy_rsa -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -p $PORT"
+          rsync -az --delete \
+            --exclude node_modules \
+            --exclude .git \
+            --exclude .github \
+            --exclude .claude \
+            -e "$RSYNC_RSH" \
+            ./ "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/"
+
+      - name: Install production deps & restart PM2
+        uses: appleboy/ssh-action@v1.2.4
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -eu
+            export NVM_DIR=/root/.nvm
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+            nvm use 16.20.2
+            cd ${{ env.DEPLOY_PATH }}
+            npm ci --omit=dev
+            if pm2 describe ptf-aa >/dev/null 2>&1; then
+              pm2 restart ptf-aa
+            else
+              pm2 start ecosystem.config.cjs --interpreter "$(which node)"
+            fi
+            pm2 save
